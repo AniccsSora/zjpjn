@@ -348,25 +348,34 @@ class ResNetVQVAE(torch.nn.Module):
         return loss, x_recon, perplexity, encodings
     
     
-    if __name__ == '__main__':
+if __name__ == '__main__':
+    
+    encoder_config = {
+        'n_ResidualBlock': 8,
+        'n_levels': 4,
+        'input_ch': 3,
+        'z_dim': 10,
+        'bUseMultiResSkips': True
+    }
+    encoder = ResNetEncoder(config = encoder_config)
+    
+    decoder_config = {
+        'n_ResidualBlock': 8,
+        'n_levels': 4,
+        'z_dim': 10,
+        'output_channels': 3,
+        'bUseMultiResSkips': True
+    }
+    decoder = ResNetDecoder(config = decoder_config)
+    
+    test_input = torch.rand(10, 3, 256, 256)
+    out = encoder(test_input)
 
-        encoder = ResNetEncoder()
-        decoder = ResNetDecoder()
+    test_input = torch.rand(10, 10, 16, 16)
+    out = decoder(test_input)
 
-        test_input = torch.rand(10, 3, 256, 256)
-        out = encoder(test_input)
-
-        test_input = torch.rand(10, 10, 16, 16)
-        out = decoder(test_input)
-
-        a=1
-
-        ae = ResNetAE()
-        out = ae(torch.rand(10, 3, 256, 256))
-
-        a=1
-
-        vae = ResNetVAE()
-        out = vae(torch.rand(10, 3, 256, 256))
-
-        a=1
+    encoder_num_layers = len(list(encoder.children()))
+    print("Number of layers (encoder):", encoder_num_layers)
+    
+    decoder_num_layers = len(list(decoder.children()))
+    print("Number of layers (decoder):", decoder_num_layers)
