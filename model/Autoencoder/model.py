@@ -26,7 +26,9 @@ class ResNetEncoder(torch.nn.Module):
         # 
         n_ResidualBlock = config['n_ResidualBlock']  # offcial default = 8
         n_levels = config['n_levels']  # offcial default = 4
-        input_ch = config['input_ch']  # offcial default = 3
+        input_ch = config.get('input_ch')  # offcial default = 3
+        if input_ch is None:
+            input_ch = config['input_shape'][2]
         z_dim = config['z_dim']  # offcial default = 10
         bUseMultiResSkips = config['bUseMultiResSkips']  # offcial default = True
         #
@@ -181,24 +183,44 @@ class ResNetDecoder(torch.nn.Module):
 
 
 class ResNetAE(torch.nn.Module):
-    def __init__(self,
-                 input_shape=(256, 256, 3),
-                 n_ResidualBlock=8,
-                 n_levels=4,
-                 z_dim=128,
-                 bottleneck_dim=128,
-                 bUseMultiResSkips=True):
+    def __init__(self, config):
+        """
+        Official default:
+             input_shape=(256, 256, 3),
+             n_ResidualBlock=8,
+             n_levels=4,
+             z_dim=128,
+             bottleneck_dim=128,
+             bUseMultiResSkips=True
+        """
+        #
+        input_shape = config['input_shape']
+        n_ResidualBlock = config['n_ResidualBlock']
+        n_levels = config['n_levels']
+        z_dim = config['z_dim']
+        bottleneck_dim = config['bottleneck_dim']
+        bUseMultiResSkips = config['bUseMultiResSkips']
+        #
+        # my logic
+        if config.get('__BY_CONDUCTOR__', None) is None:
+            raise AssertionError("PLEASE init ResNetAE by ResNetAE_Conductor, and use Config to init.")
+        
         super(ResNetAE, self).__init__()
 
         assert input_shape[0] == input_shape[1]
         image_channels = input_shape[2]
         self.z_dim = z_dim
         self.img_latent_dim = input_shape[0] // (2 ** n_levels)
-
-        self.encoder = ResNetEncoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
-                                     input_ch=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
-        self.decoder = ResNetDecoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
-                                     output_channels=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+        
+        UseOfficial_default = False
+        if UseOfficial_default:
+            self.encoder = ResNetEncoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
+                                         input_ch=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+            self.decoder = ResNetDecoder(n_ResidualBlock=n_ResidualBlock, n_levels=n_levels,
+                                         output_channels=image_channels, z_dim=z_dim, bUseMultiResSkips=bUseMultiResSkips)
+        else:
+            self.encoder = ResNetEncoder(config)
+            self.decoder = ResNetDecoder(config)
 
         self.fc1 = torch.nn.Linear(self.z_dim * self.img_latent_dim * self.img_latent_dim, bottleneck_dim)
         self.fc2 = torch.nn.Linear(bottleneck_dim, self.z_dim * self.img_latent_dim * self.img_latent_dim)
@@ -214,6 +236,34 @@ class ResNetAE(torch.nn.Module):
     def forward(self, x):
         return self.decode(self.encode(x))
 
+def ResNetAE_Conductor(config) -> ResNetAE:
+    """
+    provide ResNetAE, input config will tranfer to E(), D() finally build AE and reutrn. 
+    """
+    # parser
+    input_shape = config['input_shape']  # official default = (256, 256, 3),
+    n_ResidualBlock = config['n_ResidualBlock']  # official default = 8,
+    n_levels = config['n_levels']  # official default = 4,
+    z_dim = config['z_dim']  # official default = 128,
+    bottleneck_dim = config['bottleneck_dim']  # official default = 128,
+    bUseMultiResSkips = config['bUseMultiResSkips']  # official default = True
+    
+    # will include E, D params
+    config = {
+        'input_shape': input_shape,
+        'bottleneck_dim': bottleneck_dim,
+        'n_ResidualBlock': n_ResidualBlock,
+        'n_levels': n_levels,
+        'z_dim': z_dim,  # show the same between E(), D()
+        'output_channels': input_shape[2],
+        'bUseMultiResSkips': True
+    }
+
+    # special inner logic
+    config.update({'__BY_CONDUCTOR__': "YES"})
+
+    return ResNetAE(config)
+    
 
 class ResNetVAE(torch.nn.Module):
     def __init__(self,
@@ -347,35 +397,55 @@ class ResNetVQVAE(torch.nn.Module):
         x_recon = self.decoder(quantized)
         return loss, x_recon, perplexity, encodings
     
-    
+
 if __name__ == '__main__':
-    
+    ae_config = {
+    'input_shape': (256, 256, 3),
+    'n_ResidualBlock': 8,
+    'n_levels': 4,
+    'z_dim': 10,  
+    'bottleneck_dim': 128,
+    'bUseMultiResSkips': True
+    }
+    decoder_config = {
+        'n_ResidualBlock': 8,
+        'n_levels': 4,
+        'z_dim': 10,  # show the same between E(), D()
+        'output_channels': 3,
+        'bUseMultiResSkips': True
+    }
     encoder_config = {
         'n_ResidualBlock': 8,
         'n_levels': 4,
         'input_ch': 3,
-        'z_dim': 10,
+        'z_dim': 10,  # show the same between E(), D()
         'bUseMultiResSkips': True
     }
-    encoder = ResNetEncoder(config = encoder_config)
-    
-    decoder_config = {
-        'n_ResidualBlock': 8,
-        'n_levels': 4,
-        'z_dim': 10,
-        'output_channels': 3,
-        'bUseMultiResSkips': True
-    }
-    decoder = ResNetDecoder(config = decoder_config)
-    
-    test_input = torch.rand(10, 3, 256, 256)
-    out = encoder(test_input)
 
-    test_input = torch.rand(10, 10, 16, 16)
-    out = decoder(test_input)
+    encoder = ResNetEncoder(config=encoder_config)
+    
+    decoder = ResNetDecoder(config=decoder_config)
+    
+    ae = ResNetAE_Conductor(config=ae_config)
 
-    encoder_num_layers = len(list(encoder.children()))
+    #
+    test_input_E = torch.rand(10, 3, ae_config['input_shape'][0], ae_config['input_shape'][1])
+    out = encoder(test_input_E)
+
+    test_input_O = torch.rand(10, 10, 16, 16)
+    out = decoder(test_input_O)
+    #
+    encoder_num_layers = sum(1 for _ in encoder.named_modules())
     print("Number of layers (encoder):", encoder_num_layers)
-    
-    decoder_num_layers = len(list(decoder.children()))
+    print("input.shape =", test_input_E.shape)
+    print("output.shape =", encoder(test_input_E).shape)
+    #
+    decoder_num_layers = sum(1 for _ in decoder.named_modules())
     print("Number of layers (decoder):", decoder_num_layers)
+    print("input.shape =", test_input_O.shape)
+    print("output.shape =", decoder(test_input_O).shape)
+    #
+    ae_num_layers = sum(1 for _ in ae.named_modules())
+    print("Number of layers (AutoEncoder):", ae_num_layers)
+    print("input.shape =", test_input_E.shape)
+    print("output.shape =", ae(test_input_E).shape)
