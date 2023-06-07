@@ -53,7 +53,7 @@ if __name__ == "__main__":
     input_channels = 3
     
     # 輸入的圖片大小
-    input_size = 128
+    input_size = 256
     
     # 定義超參數配置字典
     # config = {
@@ -64,13 +64,15 @@ if __name__ == "__main__":
     #     'layer_stride': [2, 2, 2, 2, 2, 2, 2, 2],              # 卷積步長
     #     'layer_padding': [1, 1, 1, 1, 1, 1, 1, 1],             # 卷積填充數
     # }
+
+    # 可任意調整 讓輸出可以是  torch.Size([<Batch_size>, 1, 1, 1]) 即可
     config = {
         'in_channels': input_channels,                      # 輸入通道數
         'out_channels': 1,                     # 最後一層輸出通道數
-        'layer_depth': [16, 32, 64, 128, 256, 512, 1024], # 每層的輸出通道數量
-        'layer_kernel_size': [4, 4, 4, 4, 4, 4, 4],      # 卷積核尺寸
-        'layer_stride': [2, 2, 2, 2, 2, 2, 2],           # 卷積步長
-        'layer_padding': [1, 1, 1, 1, 1, 1, 1],          # 卷積填充數
+        'layer_depth': [4, 8, 16, 32, 64, 128, 256, 512], # 每層的輸出通道數量
+        'layer_kernel_size': [4, 4, 4, 4, 4, 4, 4, 4],      # 卷積核尺寸
+        'layer_stride': [2, 2, 2, 2, 2, 2, 2, 2],           # 卷積步長
+        'layer_padding': [1, 1, 1, 1, 1, 1, 1, 1],          # 卷積填充數
     }
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

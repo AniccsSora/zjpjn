@@ -404,13 +404,13 @@ if __name__ == '__main__':
     'n_ResidualBlock': 8,
     'n_levels': 4,
     'z_dim': 10,  
-    'bottleneck_dim': 128,
+    'bottleneck_dim': 128,  # 真正的 latent vector size
     'bUseMultiResSkips': True
     }
     decoder_config = {
         'n_ResidualBlock': 8,
         'n_levels': 4,
-        'z_dim': 10,  # show the same between E(), D()
+        'z_dim': 10,  # the same between E(), D()
         'output_channels': 3,
         'bUseMultiResSkips': True
     }
@@ -418,7 +418,7 @@ if __name__ == '__main__':
         'n_ResidualBlock': 8,
         'n_levels': 4,
         'input_ch': 3,
-        'z_dim': 10,  # show the same between E(), D()
+        'z_dim': 10,  # the same between E(), D()
         'bUseMultiResSkips': True
     }
 
