@@ -11,6 +11,19 @@ import tqdm
 from pathlib import Path
 import os
 
+def draw_loss_AE(ae_loss, save_dir, name, idx):
+    plt.figure(figsize=(10, 5))
+    plt.title("Autoencoder Loss During Training")
+    plt.plot(ae_loss, label="AE")
+    plt.xlabel("iterations")
+    plt.ylabel("Loss")
+    plt.legend()
+    #plt.show()
+    if Path(save_dir).is_dir():
+        plt.savefig(f"{save_dir}/{name}_{idx}.png")
+    else:
+        os.makedirs(Path(save_dir))
+        plt.savefig(f"{save_dir}/{name}_{idx}.png")
 
 def draw_loss_GD(g_loss, d_loss, save_dir, name, idx):
     plt.figure(figsize=(10, 5))
@@ -107,13 +120,13 @@ if __name__== "__main__":
     batch_size = 32
     dataset_im_size = 32
 
-    lr = 0.0002
+    lr = 0.00005
 
     # Beta1 hyperparameter for Adam optimizers
     beta1 = 0.5
 
     # 訓練次數
-    epochs = 1000
+    epochs = 20000
 
     """
     =======================================================================
@@ -248,7 +261,13 @@ if __name__== "__main__":
             #  D network: 第二階段處理 Fake Data
             ## Train with all-fake batch
             # Generate batch of latent vectors
-            noise = torch.randn(b_size, bottle_neck_dims, 1, 1, device=device)
+            # noise = torch.randn(b_size, bottle_neck_dims, 1, 1, device=device)
+            #
+            # 從 Encoder 來的 noise
+            #with torch.no_grad():
+                # (<b_size>, bottle_neck_dims) -> (<b_size>, bottle_neck_dims, 1, 1)
+            noise = netAE.encode(real_on_device).unsqueeze(-1).unsqueeze(-1)
+
             # Generate fake image batch with G
             fake = netG(noise)
             label.fill_(fake_label)
@@ -304,12 +323,15 @@ if __name__== "__main__":
         # draw
         if epoch % save_loss_png_period_of_epoehes == 0:
             draw_loss_GD(g_loss=G_losses, d_loss=D_losses,
-                      save_dir=loss_png_save_path, name="loss", idx=epoch)
+                      save_dir=loss_png_save_path+"/GD", name="loss", idx=epoch)
         # 繪製 有 AE_loss, G_losses, D_losses 的圖
         if epoch % save_loss_png_period_of_epoehes == 0:
             draw_loss_AEGD(ae_loss=AE_losses, g_loss=G_losses, d_loss=D_losses,
-                           save_dir=loss_png_save_path, name="loss", idx=epoch)
-
+                           save_dir=loss_png_save_path+"/AEGD", name="loss", idx=epoch)
+        # 單純繪製只有 AE_loss 的圖
+        if epoch % save_loss_png_period_of_epoehes == 0:
+            draw_loss_AE(ae_loss=AE_losses,
+                         save_dir=loss_png_save_path+"/AE", name="loss", idx=epoch)
         # 保存模型_訓練時
         if epoch % save_weight_each_epoch == 0:
             torch.save(netG.state_dict(),
