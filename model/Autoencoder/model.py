@@ -422,17 +422,19 @@ if __name__ == '__main__':
         'bUseMultiResSkips': True
     }
 
-    encoder = ResNetEncoder(config=encoder_config)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    encoder = ResNetEncoder(config=encoder_config).to(device)
     
-    decoder = ResNetDecoder(config=decoder_config)
+    decoder = ResNetDecoder(config=decoder_config).to(device)
     
-    ae = ResNetAE_Conductor(config=ae_config)
+    ae = ResNetAE_Conductor(config=ae_config).to(device)
 
     #
-    test_input_E = torch.rand(10, 3, ae_config['input_shape'][0], ae_config['input_shape'][1])
+    test_input_E = torch.rand(10, 3, ae_config['input_shape'][0], ae_config['input_shape'][1]).to(device)
     out = encoder(test_input_E)
 
-    test_input_O = torch.rand(10, 10, 16, 16)
+    test_input_O = torch.rand(10, 10, 16, 16).to(device)
     out = decoder(test_input_O)
     #
     encoder_num_layers = sum(1 for _ in encoder.named_modules())

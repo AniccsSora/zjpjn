@@ -26,10 +26,12 @@ def test_ae_inputShape_outputShape(test_input, expected):
     config = test_input
     input_shape = expected['test_input_batch']
     output = expected['test_output_shape']
+
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     #
-    ae = ResNetAE_Conductor(config)
+    ae = ResNetAE_Conductor(config).to(device)
     #
-    input_batch = torch.randn(input_shape)
+    input_batch = torch.randn(input_shape).to(device)
     #
     net_output = ae(input_batch)
     #
