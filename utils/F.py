@@ -1,6 +1,19 @@
 import os
 import shutil
 from datetime import datetime
+import torch
+
+
+def write_log(log_str, log_file):
+    with open(log_file, 'a', encoding='utf-8') as f:
+        f.write(log_str + '\n')
+
+def save_best_model(net, best_loss, current_loss, save_dir, save_pt_name):
+    if current_loss < best_loss:
+        torch.save(net.state_dict(), os.path.join(save_dir, f'best_{save_pt_name}.pt'))
+        return current_loss
+    else:
+        return best_loss
 
 def timestamp():
     return datetime.now().strftime("%Y-%m-%d_%p_%Ih%Mm%Ss")
