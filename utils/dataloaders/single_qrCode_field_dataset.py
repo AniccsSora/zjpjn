@@ -56,7 +56,9 @@ def get_QRCode_dataloader(data_folder: str, batch_size=32, im_size=128, num_outp
     dataset = QRCodeDataset(data_folder, transform=transform)
 
     # 創建資料載入器
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    # pin_memory: 可以加快東西載入
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True
+                                              , pin_memory=True)
 
     return data_loader
 
