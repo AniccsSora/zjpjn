@@ -19,17 +19,18 @@ test_cases_pair = [
 ]
 
 
-
 @pytest.mark.parametrize('test_input,expected', test_cases_pair)
 def test_eval(test_input, expected):
     config = test_input
     input_shape = expected['test_input_batch']
     output = expected['out_dims_shape']
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     #
-    encoder = ResNetEncoder(config)
+    encoder = ResNetEncoder(config).to(device)
     #
-    input_batch = torch.randn(input_shape)
+    input_batch = torch.randn(input_shape).to(device)
     #
     net_output = encoder(input_batch)
     #
     assert net_output.shape == output
+

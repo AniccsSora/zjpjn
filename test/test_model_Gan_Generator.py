@@ -25,6 +25,7 @@ def setup_generator(request):
     z = torch.randn(batch, test_params['in_channels'], 1, 1, device=device)
     output = generator(z)
 
+
     return output, test_params
 
 test_configs = [
