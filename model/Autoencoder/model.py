@@ -1,4 +1,6 @@
 import torch
+import matplotlib.pyplot as plt
+import tqdm
 
 
 class ResidualBlock(torch.nn.Module):
@@ -451,3 +453,42 @@ if __name__ == '__main__':
     print("Number of layers (AutoEncoder):", ae_num_layers)
     print("input.shape =", test_input_E.shape)
     print("output.shape =", ae(test_input_E).shape)
+
+    # ======================================
+    loss_function = torch.nn.MSELoss()
+    optimizer = torch.optim.Adam(ae.parameters(),
+                                 lr=1e-1,
+                                 weight_decay=1e-8)
+    epochs = 10
+    losses = []
+
+    pbar = tqdm.tqdm(range(epochs))
+
+    for epoch in pbar:
+        pbar.set_description(f"Epoch {epoch}")
+        for image in test_input_E:
+            optimizer.zero_grad()
+
+            # A image to batch
+            ground_batch = image.unsqueeze(0)
+
+            # Output of Autoencoder
+            reconstructed = ae(ground_batch.to(device))
+
+            # Calculating the loss function
+            loss = loss_function(reconstructed, ground_batch)
+
+            # The gradients are set to zero,
+            # the gradient is computed and stored.
+            # .step() performs parameter update
+
+            loss.backward()
+            optimizer.step()
+
+            # Storing the losses in a list for plotting
+            losses.append(loss.item())
+
+
+    # Plotting the last 100 values
+    plt.plot(losses)
+    plt.show()
