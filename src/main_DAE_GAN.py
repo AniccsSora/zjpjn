@@ -12,7 +12,7 @@ import tqdm
 from pathlib import Path
 import os
 import numpy as np
-
+import json
 
 
 # THE SEED!!!
@@ -21,6 +21,30 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 torch.cuda.manual_seed(seed)
 torch.backends.cudnn.deterministic = True
+
+def get_optimizer(use_optim, model, lr, Adam_beta1=0.5):
+    # torch optimizers list
+
+    if use_optim=='Adam':
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=(Adam_beta1, 0.999))
+    elif use_optim=='SGD':
+        optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    elif use_optim=='RMSprop':
+        """
+        alpha = 衰減率，越低可以越快的調整學習率。
+        weight_decay = L2正則化，防止過擬合。增加他會減少模型福砸度 提高泛化能力。
+        """
+        alpha = 0.99
+        weight_decay = 0.00005
+        momentum = 0.9
+        optimizer = optim.RMSprop(model.parameters(), lr=lr, alpha=alpha, eps=1e-08,
+                                  weight_decay=weight_decay,
+                                  momentum=momentum,
+                                  centered=False)
+    else:
+        assert False
+
+    return optimizer
 
 def draw_loss_AE(ae_loss, save_dir, name, idx):
     plt.figure(figsize=(10, 5))
@@ -160,7 +184,7 @@ if __name__ == "__main__":
     netAE.apply(weights_init)
 
     # 是否續練?
-    __RESUME__WEIGHT__ = True
+    __RESUME__WEIGHT__ = False
 
     #
     if __RESUME__WEIGHT__:
@@ -182,11 +206,14 @@ if __name__ == "__main__":
     """
 
     criterion_gan = nn.BCELoss()
-    optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
-    optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
+    #optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerD = get_optimizer('RMSprop', netD, lr=lr)
+    #optimizerG = optim.Adam(netG.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerG = get_optimizer('RMSprop', netG, lr=lr)
 
     criterion_ae = nn.MSELoss()
-    optimizerAE = optim.Adam(netAE.parameters(), lr=lr, betas=(beta1, 0.999))
+    #optimizerAE = optim.Adam(netAE.parameters(), lr=lr, betas=(beta1, 0.999))
+    optimizerAE = get_optimizer('RMSprop', netAE, lr=lr)
 
     # 在訓練期間的 真假 標籤約定
     real_label = 1.
@@ -237,6 +264,24 @@ if __name__ == "__main__":
     ===============================================================
     """
 
+    # write optimizer state dict to log file.
+    optimizer_state_dict_D = optimizerD.state_dict()
+    optimizer_state_dict_G = optimizerG.state_dict()
+    optimizer_state_dict_AE = optimizerAE.state_dict()
+
+    _name_list = ['discriminator_optm_params', 'generator_optm_params', 'autoencoder_optm_params']
+    _opti_list = [optimizer_state_dict_D, optimizer_state_dict_G, optimizer_state_dict_AE]
+    for n, o in zip(_name_list, _opti_list):
+        write_log("vvvvvvvvvvvvvvvvvvvv {} PARAMS START vvvvvvvvvvvvvvvvvvv".format(n), f"{save_path}/log.txt")
+        formatted_dict = json.dumps(o, indent=4)
+        write_log(formatted_dict, f"{save_path}/log.txt")
+        write_log("^^^^^^^^^^^^^^^^^^^^ {} PARAMS END ^^^^^^^^^^^^^^^^^^^^".format(n), f"{save_path}/log.txt")
+
+    """
+    ============================================================================
+    ============================ before start logging ==========================
+    ============================================================================
+    """
     # 訓練時期的數據紀錄:
     G_losses = []
     D_losses = []
@@ -384,8 +429,7 @@ if __name__ == "__main__":
             torch.save(netAE.state_dict(),
                        '{}/autoencoder_model_{}.pt'.format(history_weight_save_path, str(epoch).zfill(4)))
         # Save visualized images
-        #if epoch % save_visualized_image_each_epoch == 0:
-        if 1:
+        if epoch % save_visualized_image_each_epoch == 0:
             with torch.no_grad():
                 # get batch from data_loader
                 real_on_device = next(iter(data_loader))
