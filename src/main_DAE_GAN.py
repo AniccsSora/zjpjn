@@ -141,6 +141,7 @@ if __name__== "__main__":
     # 隨機化
     netG.apply(weights_init)
     netD.apply(weights_init)
+    netAE.apply(weights_init)
     """
     =======================================================================
     ============================= Model End ===============================
@@ -214,6 +215,10 @@ if __name__== "__main__":
     for epoch in range(epochs):
         #pbar.set_description("Processing Epoch {}".format(epoch))
         #inner_pbar = tqdm.tqdm(data_loader)
+
+        G_batch_losses = []
+        D_batch_losses = []
+        AE_batch_losses = []
         for batch_idx, real_images in enumerate(data_loader):
             #inner_pbar.set_description("== Processing Batch {}".format(batch_idx))
             """ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -264,9 +269,9 @@ if __name__== "__main__":
             # noise = torch.randn(b_size, bottle_neck_dims, 1, 1, device=device)
             #
             # 從 Encoder 來的 noise
-            #with torch.no_grad():
+            with torch.no_grad():
                 # (<b_size>, bottle_neck_dims) -> (<b_size>, bottle_neck_dims, 1, 1)
-            noise = netAE.encode(real_on_device).unsqueeze(-1).unsqueeze(-1)
+                noise = netAE.encode(real_on_device).unsqueeze(-1).unsqueeze(-1)
 
             # Generate fake image batch with G
             fake = netG(noise)
@@ -313,12 +318,17 @@ if __name__== "__main__":
                 print(logg_str)
 
             # Save Losses for plotting later
-            G_losses.append(errG.item())
-            D_losses.append(errD.item())
-            AE_losses.append(loss_AE.item())
+            G_batch_losses.append(errG.item())
+            D_batch_losses.append(errD.item())
+            AE_batch_losses.append(loss_AE.item())
         #
         #  A Batch End
         #
+
+        # Append average loss
+        G_losses.append(G_batch_losses/batch_size)
+        D_losses.append(D_batch_losses/batch_size)
+        AE_losses.append(AE_batch_losses/batch_size)
 
         # draw
         if epoch % save_loss_png_period_of_epoehes == 0:
