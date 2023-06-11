@@ -2,6 +2,7 @@ from model.Autoencoder.model import ResNetAE_Conductor
 from model.Gan.Discriminator import Discriminator
 from model.Gan.Generator import Generator
 from utils.F import ensure_folder, timestamp, save_best_model, write_log
+from utils.F import create_grid_image, create_grid_image2
 from utils.dataloaders.single_qrCode_field_dataset import get_QRCode_dataloader
 import torch
 import matplotlib.pyplot as plt
@@ -10,6 +11,16 @@ import torch.optim as optim
 import tqdm
 from pathlib import Path
 import os
+import numpy as np
+
+
+
+# THE SEED!!!
+seed = 999
+np.random.seed(seed)
+torch.manual_seed(seed)
+torch.cuda.manual_seed(seed)
+torch.backends.cudnn.deterministic = True
 
 def draw_loss_AE(ae_loss, save_dir, name, idx):
     plt.figure(figsize=(10, 5))
@@ -64,17 +75,21 @@ def weights_init(m):
         nn.init.constant_(m.bias.data, 0)
 
 
-__RESUME__WEIGHT__ = True
-def  GO__RESUME__WEIGHT():
-    __save_path = "../../output/123132132"
-    generator_weight = torch.load(__save_path+"/best_generator.pth")
-    discriminator_weight = torch.load(__save_path+"/best_discriminator.pth")
-    netG.load_state_dict(generator_weight)
-    netD.load_state_dict(discriminator_weight)
-    netAE.load_state_dict(discriminator_weight)
+def  GO__RESUME__WEIGHT(resume_ae, resume_g, resume_d):
+    __save_path = "./"
+    generator_weight = torch.load(__save_path+"/best_best_G.pt")  # 這是 custom
+    discriminator_weight = torch.load(__save_path+"/best_best_D.pt")  # 這是 custom
+    ae_weight = torch.load(__save_path + "/best_best_AE.pt")  # 這是 custom
 
-if __name__== "__main__":
+    # hard code below
+    if resume_g:
+        netG.load_state_dict(generator_weight)
+    if resume_d:
+        netD.load_state_dict(discriminator_weight)
+    if resume_ae:
+        netAE.load_state_dict(ae_weight)
 
+if __name__ == "__main__":
     # 這 model 會用到
     image_size = 256
     image_channels = 3
@@ -133,6 +148,7 @@ if __name__== "__main__":
     ========================= Hyper Params End ============================
     =======================================================================
     """
+
     #
     netAE = ResNetAE_Conductor(config=res_ae_config).to(device)
     netD = Discriminator(config=discrimitor_config).to(device)
@@ -142,6 +158,14 @@ if __name__== "__main__":
     netG.apply(weights_init)
     netD.apply(weights_init)
     netAE.apply(weights_init)
+
+    # 是否續練?
+    __RESUME__WEIGHT__ = True
+
+    #
+    if __RESUME__WEIGHT__:
+        print("Load previouse weight...")
+        GO__RESUME__WEIGHT(resume_ae=True, resume_g=True, resume_d=False)
     """
     =======================================================================
     ============================= Model End ===============================
@@ -174,6 +198,8 @@ if __name__== "__main__":
     save_loss2log = 10
     # 多久強制存 model 一次
     save_weight_each_epoch = 50
+    # 多久存一次 visualized image
+    save_visualized_image_each_epoch = 50
 
     # 決定最佳時，存檔用的
     best_D_loss = float('inf')
@@ -198,6 +224,13 @@ if __name__== "__main__":
     loss_png_save_path = os.path.join(save_path, 'loss_png')
     ensure_folder(loss_png_save_path)
 
+    # 視覺化圖片存檔用資料夾
+    visulize_G_save_path = os.path.join(save_path, 'visulize/Gen_Images')
+    ensure_folder(visulize_G_save_path)
+
+    # 視覺化圖片存檔用資料夾
+    visulize_AE_save_path = os.path.join(save_path, 'visulize/AE_Images')
+    ensure_folder(visulize_AE_save_path)
     """
     ===============================================================
     ============================ PATH  ============================
@@ -326,9 +359,9 @@ if __name__== "__main__":
         #
 
         # Append average loss
-        G_losses.append(G_batch_losses/batch_size)
-        D_losses.append(D_batch_losses/batch_size)
-        AE_losses.append(AE_batch_losses/batch_size)
+        G_losses.append(np.array(G_batch_losses).mean())
+        D_losses.append(np.array(D_batch_losses).mean())
+        AE_losses.append(np.array(AE_batch_losses).mean())
 
         # draw
         if epoch % save_loss_png_period_of_epoehes == 0:
@@ -350,13 +383,30 @@ if __name__== "__main__":
                        '{}/discriminator_model_{}.pt'.format(history_weight_save_path, str(epoch).zfill(4)))
             torch.save(netAE.state_dict(),
                        '{}/autoencoder_model_{}.pt'.format(history_weight_save_path, str(epoch).zfill(4)))
+        # Save visualized images
+        #if epoch % save_visualized_image_each_epoch == 0:
+        if 1:
+            with torch.no_grad():
+                # get batch from data_loader
+                real_on_device = next(iter(data_loader))
+                # input to autoencoder's encoder part
+                latent_from_Encoder = netAE.encode(real_on_device.to(device)).unsqueeze(-1).unsqueeze(-1)
+                val_generated_images = netG(latent_from_Encoder).detach().cpu()
+                ae_rebuild_images = netAE(real_on_device.to(device)).detach().cpu()
+                # save images to 'visulize_G_save_path'
+                create_grid_image(val_generated_images, grid_size=(4, 4), dpi=150,
+                                  save_path=visulize_G_save_path+"/epoch_{}.png".format(epoch))
+                # Save image for AutoEncoder
+                create_grid_image2(real_on_device, ae_rebuild_images, grid_size=(4, 4), dpi=150,
+                                   save_path=visulize_AE_save_path + "/epoch_{}.png".format(epoch))
+
 
         # epoch 結束後，決定是否是最佳 model 更新他們
         # (net, best_loss, current_loss, save_dir, save_pt_name)
         best_D_loss, best_G_loss, best_AE_loss = \
-            save_best_model(netD, best_D_loss, D_losses[-1], save_path, "best_D.pt"), \
-            save_best_model(netG, best_G_loss, G_losses[-1], save_path, "best_G.pt"), \
-            save_best_model(netAE, best_AE_loss, AE_losses[-1], save_path, "best_AE.pt")
+            save_best_model(netD, best_D_loss, D_losses[-1], save_path, "best_D"), \
+            save_best_model(netG, best_G_loss, G_losses[-1], save_path, "best_G"), \
+            save_best_model(netAE, best_AE_loss, AE_losses[-1], save_path, "best_AE")
 
         print("=== Best Update ===")
         if best_D_loss != D_losses[-1]:
