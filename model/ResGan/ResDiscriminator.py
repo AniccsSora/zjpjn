@@ -104,7 +104,7 @@ class ResNetDiscriminator(torch.nn.Module):
         # 第一個參數跟著 config 改
         x = nn.Linear(1024, self.z_dim, bias=False, device=x.device)(x)
         x = nn.Linear(self.z_dim, 1, bias=False, device=x.device)(x)
-        return x
+        return torch.sigmoid(x)
 
 
 if __name__ == "__main__":
