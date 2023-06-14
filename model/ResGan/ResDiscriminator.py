@@ -101,25 +101,28 @@ class ResNetDiscriminator(torch.nn.Module):
 
         # go flatten
         x = x.view(b_size, -1)
-        x = nn.Linear(2560, self.z_dim, bias=False)(x)
-        x = nn.Linear(self.z_dim, 1, bias=False)(x)
+        # 第一個參數跟著 config 改
+        x = nn.Linear(1024, self.z_dim, bias=False, device=x.device)(x)
+        x = nn.Linear(self.z_dim, 1, bias=False, device=x.device)(x)
         return x
 
 
 if __name__ == "__main__":
+    # 這裡的 config 會影響模型的輸出 形狀，請注意!!!
     discriminator_config = {
         'n_ResidualBlock': 8,
         'n_levels': 4,
         'input_ch': 3,
-        'z_dim': 10,  # the same between E(), D()
+        'z_dim': 4,  # the same between E(), D()
         'bUseMultiResSkips': True
     }
-
-    D = ResNetDiscriminator(config=discriminator_config)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    D = ResNetDiscriminator(config=discriminator_config).to(device)
     print("ResNetDiscriminator layers =", sum(1 for _ in D.named_modules()))
 
-    test_batch = torch.randn((8, 3, 256, 256))
+    test_batch = torch.randn((8, 3, 256, 256)).to(device)
 
-    D(test_batch)
+    print("input shape =", test_batch.shape)
+    print("output shape =", D(test_batch).shape)
 
 
