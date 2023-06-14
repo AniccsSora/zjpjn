@@ -2,8 +2,54 @@ import os
 import shutil
 from datetime import datetime
 import torch
+import matplotlib.pyplot as plt
+import torchvision.utils as vutils
 import random
 import qrcode
+
+def create_grid_image2(left_images, right_images, grid_size, save_path=None, dpi=300):
+    assert left_images.shape[0] >= grid_size[0] * grid_size[1]
+    assert right_images.shape[0] >= grid_size[0] * grid_size[1]
+
+    plt.close("all")
+
+    # Create the left grid image
+    left_grid = vutils.make_grid(left_images[:grid_size[0] * grid_size[1]], nrow=grid_size[0], padding=2,
+                                 normalize=True)
+
+    # Create the right grid image
+    right_grid = vutils.make_grid(right_images[:grid_size[0] * grid_size[1]], nrow=grid_size[0], padding=2,
+                                  normalize=True)
+
+    # Set up the plot
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+
+    # Display the left grid image
+    axs[0].axis('off')
+    axs[0].imshow(left_grid.permute(1, 2, 0))
+
+    # Display the right grid image
+    axs[1].axis('off')
+    axs[1].imshow(right_grid.permute(1, 2, 0))
+
+    if save_path is not None:
+        plt.savefig(save_path, dpi=150)
+    else:
+        plt.show()
+
+def create_grid_image(batch_images, grid_size, save_path=None, dpi=300):
+    assert batch_images.shape[0] >= grid_size[0]*grid_size[1]
+    plt.close("all")
+    grid = vutils.make_grid(batch_images[:grid_size[0]*grid_size[1]], nrow=grid_size[0], padding=2, normalize=True)
+    plt.axis('off')
+    plt.imshow(grid.permute(1, 2, 0))
+    if save_path is not None:
+        plt.savefig(save_path, dpi=dpi)
+    else:
+        plt.show()
+
+
+
 
 
 def write_log(log_str, log_file):
@@ -38,13 +84,13 @@ def ensure_folder(folder_path, remake=False):
             os.makedirs(folder_path, 0o755)
     else:
         os.makedirs(folder_path, 0o755)
-        
-        
+
+
 def generate_random_message(qr_version):
     """
     取得符合對應 qrcode version 的 message 長度。
     """
-    
+
     # Set the maximum length limit for each QR code version
     version_limits = {
         1: 25,
