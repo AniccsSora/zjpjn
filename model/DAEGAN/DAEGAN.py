@@ -26,7 +26,7 @@ if __name__== "__main__":
         'bUseMultiResSkips': True
     }
 
-    discrimitor_config = {
+    discriminator_config = {
         'in_channels': image_channels,                      # 輸入的圖片通道數
         'out_channels': 1,                     # 最後一層輸出通道數
         'layer_depth': [4, 8, 16, 32, 64, 128, 256, 512], # 每層的輸出通道數量
@@ -48,8 +48,8 @@ if __name__== "__main__":
     # 訓練AE的圖片們
     ae_test_input_batch = torch.randn((32, 3, 256, 256)).to(device)
 
-    discriminator = Discriminator(config=discrimitor_config).to(device)
-    # 輸入給 discrimitor 的圖片們，形狀應等同 AE 所輸出的。
+    discriminator = Discriminator(config=discriminator_config).to(device)
+    # 輸入給 discriminator 的圖片們，形狀應等同 AE 所輸出的。
     ae_test_input_batch = torch.randn_like(ae_test_input_batch).to(device)
 
     generator = Generator(config=G_config).to(device)
