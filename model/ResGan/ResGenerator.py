@@ -24,6 +24,7 @@ class GenResidualBlock(torch.nn.Module):
 
 class ResNetGenerator(torch.nn.Module):
     def __init__(self, config):
+        super(ResNetGenerator, self).__init__()
         """
         official default:
             n_ResidualBlock=8,
@@ -41,9 +42,6 @@ class ResNetGenerator(torch.nn.Module):
         bUseMultiResSkips = config['bUseMultiResSkips']
         self.img_latent_dim = config['input_shape'][0] // (2 ** n_levels)
         #
-
-        super(ResNetGenerator, self).__init__()
-
         self.max_filters = 2 ** (n_levels + 3)
         self.n_levels = n_levels
         self.bUseMultiResSkips = bUseMultiResSkips
@@ -90,11 +88,14 @@ class ResNetGenerator(torch.nn.Module):
 
         self.output_conv = torch.nn.Conv2d(in_channels=n_filters_1, out_channels=output_channels,
                                            kernel_size=(3, 3), stride=(1, 1), padding=1)
+        self.bottleneck_dim = 256
+        _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.fc1 = torch.nn.Linear(self.z_dim * self.img_latent_dim * self.img_latent_dim, self.bottleneck_dim,
+                                   device=_device)
+        self.fc2 = torch.nn.Linear(self.bottleneck_dim, self.z_dim * self.img_latent_dim * self.img_latent_dim,
+                                   device=_device)
 
     def forward(self, z):
-        bottleneck_dim = 256
-        self.fc1 = torch.nn.Linear(self.z_dim * self.img_latent_dim * self.img_latent_dim, bottleneck_dim, device=z.device)
-        self.fc2 = torch.nn.Linear(bottleneck_dim, self.z_dim * self.img_latent_dim * self.img_latent_dim, device=z.device)
         z = self.fc1(z.view(-1, self.z_dim * self.img_latent_dim * self.img_latent_dim))
         z = z_top = self.input_conv(z.view(-1, self.z_dim,16, 16))
 

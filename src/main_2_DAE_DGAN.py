@@ -108,6 +108,8 @@ def  GO__RESUME__WEIGHT(resume_ae, resume_g, resume_d):
 
     # hard code below
     if resume_g:
+        # 未來不用這個
+        #filted_generator_weight = {k: v for k, v in generator_weight.items() if k in netG.state_dict()}
         netG.load_state_dict(generator_weight)
     if resume_d:
         netD.load_state_dict(discriminator_weight)
@@ -156,8 +158,7 @@ if __name__ == "__main__":
     data_folder_raw = '../data/processed/qrCodes'
 
     # 影響 tranning 的參數
-    batch_size = 32
-    dataset_im_size = 32
+    batch_size = 16
 
     lr = 0.00005
 
@@ -184,7 +185,8 @@ if __name__ == "__main__":
     netAE.apply(weights_init)
 
     # 是否續練?
-    __RESUME__WEIGHT__ = False
+    # 把 output 下的 best 拉到 src 下，給True後即可續練
+    __RESUME__WEIGHT__ = True
 
     #
     if __RESUME__WEIGHT__:
@@ -204,7 +206,7 @@ if __name__ == "__main__":
     ============================ Training Data ============================
     =======================================================================
     """
-    USED_OPTIM_NAME = 'Adam'  # RMSprop, Adam
+    USED_OPTIM_NAME = 'RMSprop'  # RMSprop, Adam
 
     criterion_gan = nn.BCELoss()
     #optimizerD = optim.Adam(netD.parameters(), lr=lr, betas=(beta1, 0.999))
@@ -241,7 +243,7 @@ if __name__ == "__main__":
     """
 
     # Training Save Path
-    save_path = '../output/ResAE_ResGAN_Adam/' + timestamp()
+    save_path = '../output/ResAE_ResGAN_RMSprop/' + timestamp()
     ensure_folder(save_path)
 
     # history weight save path
