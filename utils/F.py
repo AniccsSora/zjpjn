@@ -6,6 +6,53 @@ import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 import random
 import qrcode
+from PIL import Image, ImageDraw, ImageFont
+import os
+
+
+def make_gif(image_folder, output_file, time_per_frame=500, image_filter=".png"):
+    # List all PNG files in the folder
+    image_files = sorted([f for f in os.listdir(image_folder) if f.endswith(image_filter)])
+
+    # Open the first image to get size information
+    first_image = Image.open(os.path.join(image_folder, image_files[0]))
+    width, height = first_image.size
+
+    # Create a new image with the timeline and append the original images
+    timeline_height = 30
+    timeline_image = Image.new("RGBA", (width, height + timeline_height))
+    timeline_image.paste(first_image, (0, timeline_height))
+
+    # Define the start and end markers
+    start_marker = 10
+    end_marker = width - 10
+
+    # Append the rest of the images
+    frames = []
+    durations = []
+
+    i_factor = (width-1)//len(image_files)
+    progress_axis_width = width//i_factor
+
+    for i, f in enumerate(image_files[1:], start=1):
+        image = Image.open(os.path.join(image_folder, f))
+        frame_image = timeline_image.copy()
+        frame_image.paste(image, (0, timeline_height))
+
+        # Create a new frame with the timeline markers
+        draw = ImageDraw.Draw(frame_image)
+        draw.line([(start_marker + i*i_factor - 1, 0), (start_marker + i*i_factor - 1, timeline_height-1)], fill="blue", width=progress_axis_width)
+        draw.line([(end_marker, 0), (end_marker, timeline_height-1)], fill="red", width=10)
+
+        # Add the frame to the list of frames
+        frames.append(frame_image)
+
+        # Specify the duration for the frame (adjust as needed)
+        durations.append(time_per_frame)
+
+    # Save the frames as an animated GIF
+    frames[0].save(output_file, save_all=True, append_images=frames[1:], duration=durations, loop=0)
+
 
 def create_grid_image2(left_images, right_images, grid_size, save_path=None, dpi=300):
     assert left_images.shape[0] >= grid_size[0] * grid_size[1]
