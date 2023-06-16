@@ -129,3 +129,11 @@ if __name__ == "__main__":
 
     print("input shape =", test_batch.shape)
     print("output shape =", G(test_batch).shape)
+
+    # export to onnx
+    input_names = ["actual_input"]
+    output_names = ["output_G"]
+
+    torch.onnx.export(model=G, args=test_batch, f="ResG.onnx", verbose=True,
+                      input_names=input_names,
+                      output_names=output_names)
