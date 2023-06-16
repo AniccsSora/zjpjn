@@ -459,7 +459,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(ae.parameters(),
                                  lr=1e-1,
                                  weight_decay=1e-8)
-    epochs = 10
+    epochs = 2
     losses = []
 
     pbar = tqdm.tqdm(range(epochs))
@@ -492,3 +492,11 @@ if __name__ == '__main__':
     # Plotting the last 100 values
     plt.plot(losses)
     plt.show()
+
+    # export to onnx
+    input_names = ["actual_input_1"]
+    output_names = ["output_D"]
+
+    torch.onnx.export(ae, test_input_E, "ae.onnx", verbose=True,
+                      input_names=input_names,
+                      output_names=output_names)

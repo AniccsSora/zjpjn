@@ -82,6 +82,9 @@ class ResNetDiscriminator(torch.nn.Module):
 
         self.output_conv = torch.nn.Conv2d(in_channels=self.max_filters, out_channels=self.z_dim,
                                            kernel_size=(3, 3), stride=(1, 1), padding=1)
+        _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.fc1 = nn.Linear(1024, self.z_dim, bias=False, device=_device)
+        self.fc2 = nn.Linear(self.z_dim, 1, bias=False, device=_device)
 
     def forward(self, x):
         b_size = x.shape[0]
@@ -102,8 +105,8 @@ class ResNetDiscriminator(torch.nn.Module):
         # go flatten
         x = x.view(b_size, -1)
         # 第一個參數跟著 config 改
-        x = nn.Linear(1024, self.z_dim, bias=False, device=x.device)(x)
-        x = nn.Linear(self.z_dim, 1, bias=False, device=x.device)(x)
+        x = self.fc1(x)
+        x = self.fc2(x)
         return torch.sigmoid(x)
 
 
@@ -120,9 +123,17 @@ if __name__ == "__main__":
     D = ResNetDiscriminator(config=discriminator_config).to(device)
     print("ResNetDiscriminator layers =", sum(1 for _ in D.named_modules()))
 
-    test_batch = torch.randn((8, 3, 256, 256)).to(device)
+    test_batch = torch.randn((4, 3, 256, 256)).to(device)
 
     print("input shape =", test_batch.shape)
     print("output shape =", D(test_batch).shape)
+
+    # export to onnx
+    input_names = ["actual_input"]
+    output_names = ["output_D"]
+
+    torch.onnx.export(model=D, args=test_batch, f="ResD.onnx", verbose=True,
+                      input_names=input_names,
+                      output_names=output_names)
 
 
