@@ -31,7 +31,7 @@ class QRCodeDataset(Dataset):
 
 
 def get_QRCode_dataloader(data_folder: str, batch_size=32, im_size=128, num_output_channels=3,
-                          mean=np.array([0.5, 0.5, 0.5]), std=np.array([0.5, 0.5, 0.5])):
+                          shuffle=False, num_workers=0,mean=np.array([0.5, 0.5, 0.5]), std=np.array([0.5, 0.5, 0.5])):
     """
 
     :param data_folder: qrcode 資料夾根目錄
@@ -57,8 +57,8 @@ def get_QRCode_dataloader(data_folder: str, batch_size=32, im_size=128, num_outp
 
     # 創建資料載入器
     # pin_memory: 可以加快東西載入
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True
-                                              , pin_memory=True)
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle
+                                              , pin_memory=True, num_workers=num_workers)
 
     return data_loader
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     #
     # # 創建資料載入器
     # batch_size = 32
-    # data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    # data_loader = torch.my_utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     #
     # print("dataset length = ", len(dataset))
     #
