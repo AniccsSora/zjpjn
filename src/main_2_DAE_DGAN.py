@@ -1,10 +1,10 @@
 from model.Autoencoder.model import ResNetAE_Conductor
-#from model.Gan.Discriminator import Discriminator
-from model.ResGan.ResDiscriminator import ResNetDiscriminator
+from model.Gan.Discriminator import Discriminator
+#from model.ResGan.ResDiscriminator import ResNetDiscriminator
 from model.ResGan.ResGenerator import ResNetGenerator
-from utils.F import ensure_folder, timestamp, save_best_model, write_log
-from utils.F import create_grid_image, create_grid_image2
-from utils.dataloaders.single_qrCode_field_dataset import get_QRCode_dataloader
+from my_utils.F import ensure_folder, timestamp, save_best_model, write_log
+from my_utils.F import create_grid_image, create_grid_image2
+from my_utils.dataloaders.single_qrCode_field_dataset import get_QRCode_dataloader
 import torch
 import matplotlib.pyplot as plt
 import torch.nn as nn
@@ -63,7 +63,7 @@ def draw_loss_AE(ae_loss, save_dir, name, idx):
 
 def draw_loss_GD(g_loss, d_loss, save_dir, name, idx):
     plt.figure(figsize=(10, 5))
-    plt.title("ResNetGenerator and ResNetDiscriminator Loss During Training")
+    plt.title("ResNetGenerator and Discriminator Loss During Training")
     plt.plot(g_loss, label="G")
     plt.plot(d_loss, label="D")
     plt.xlabel("iterations")
@@ -78,7 +78,7 @@ def draw_loss_GD(g_loss, d_loss, save_dir, name, idx):
 
 def draw_loss_AEGD(ae_loss, g_loss, d_loss, save_dir, name, idx):
     plt.figure(figsize=(10, 5))
-    plt.title("Autoencoder, ResNetGenerator and ResNetDiscriminator Loss During Training")
+    plt.title("Autoencoder, ResNetGenerator and Discriminator Loss During Training")
     plt.plot(ae_loss, label="AE")
     plt.plot(g_loss, label="G")
     plt.plot(d_loss, label="D")
@@ -138,16 +138,17 @@ if __name__ == "__main__":
     }
 
     discrimitor_config = {
-        'n_ResidualBlock': 2,
-        'n_levels': 4,
-        'input_ch': 3,
-        'z_dim': 4,
-        'bUseMultiResSkips': True
+        'in_channels': image_channels,                      # 輸入的圖片通道數
+        'out_channels': 1,                     # 最後一層輸出通道數
+        'layer_depth': [4, 8, 16, 32, 64, 128, 256, 512], # 每層的輸出通道數量
+        'layer_kernel_size': [4, 4, 4, 4, 4, 4, 4, 4],      # 卷積核尺寸
+        'layer_stride': [2, 2, 2, 2, 2, 2, 2, 2],           # 卷積步長
+        'layer_padding': [1, 1, 1, 1, 1, 1, 1, 1],          # 卷積填充數
     }
 
     G_config = {
         "input_shape": (image_size, image_size, image_channels),
-        "n_ResidualBlock": 4,
+        "n_ResidualBlock": 2,
         "n_levels": 4,
         "z_dim": 1,  # fixed
         "output_channels": 3,
@@ -155,10 +156,11 @@ if __name__ == "__main__":
     }
 
     # dataloader Parameters
-    data_folder_raw = '../data/processed/qrCodes'
+    #data_folder_raw = '../data/processed/qrCodes'
+    data_folder_raw = '../data/processed/qrcode_6000'
 
     # 影響 tranning 的參數
-    batch_size = 16
+    batch_size = 24
 
     lr = 0.00005
 
@@ -176,7 +178,7 @@ if __name__ == "__main__":
 
     #
     netAE = ResNetAE_Conductor(config=res_ae_config).to(device)
-    netD = ResNetDiscriminator(config=discrimitor_config).to(device)
+    netD = Discriminator(config=discrimitor_config).to(device)
     netG = ResNetGenerator(config=G_config).to(device)
 
     # 隨機化
@@ -186,7 +188,7 @@ if __name__ == "__main__":
 
     # 是否續練?
     # 把 output 下的 best 拉到 src 下，給True後即可續練
-    __RESUME__WEIGHT__ = True
+    __RESUME__WEIGHT__ = False
 
     #
     if __RESUME__WEIGHT__:
@@ -200,7 +202,8 @@ if __name__ == "__main__":
 
 
     data_loader = get_QRCode_dataloader(data_folder_raw, batch_size=batch_size, im_size=image_size,
-                                        num_output_channels=3)
+                                        num_output_channels=3, shuffle=False, num_workers=0)
+
     """
     =======================================================================
     ============================ Training Data ============================
@@ -243,7 +246,7 @@ if __name__ == "__main__":
     """
 
     # Training Save Path
-    save_path = '../output/ResAE_ResGAN_RMSprop/' + timestamp()
+    save_path = '../output/ResAE_HalF_ResGAN_RMSprop/' + timestamp()
     ensure_folder(save_path)
 
     # history weight save path
@@ -440,12 +443,13 @@ if __name__ == "__main__":
                 latent_from_Encoder = netAE.encode(real_on_device.to(device)).unsqueeze(-1).unsqueeze(-1)
                 val_generated_images = netG(latent_from_Encoder).detach().cpu()
                 ae_rebuild_images = netAE(real_on_device.to(device)).detach().cpu()
+                z_fill_epoch = str(epoch).zfill(5)
                 # save images to 'visulize_G_save_path'
                 create_grid_image(val_generated_images, grid_size=(4, 4), dpi=150,
-                                  save_path=visulize_G_save_path+"/epoch_{}.png".format(epoch))
+                                  save_path=visulize_G_save_path+"/epoch_{}.png".format(z_fill_epoch))
                 # Save image for AutoEncoder
                 create_grid_image2(real_on_device, ae_rebuild_images, grid_size=(4, 4), dpi=150,
-                                   save_path=visulize_AE_save_path + "/epoch_{}.png".format(epoch))
+                                   save_path=visulize_AE_save_path + "/epoch_{}.png".format(z_fill_epoch))
 
 
         # epoch 結束後，決定是否是最佳 model 更新他們
