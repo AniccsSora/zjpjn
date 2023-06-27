@@ -1,9 +1,9 @@
 from model.Autoencoder.model import ResNetAE_Conductor
 from model.Gan.Discriminator import Discriminator
 from model.Gan.Generator import Generator
-from utils.F import ensure_folder, timestamp, save_best_model, write_log
-from utils.F import create_grid_image, create_grid_image2
-from utils.dataloaders.single_qrCode_field_dataset import get_QRCode_dataloader
+from my_utils.F import ensure_folder, timestamp, save_best_model, write_log
+from my_utils.F import create_grid_image, create_grid_image2
+from my_utils.dataloaders.single_qrCode_field_dataset import get_QRCode_dataloader
 import torch
 import matplotlib.pyplot as plt
 import torch.nn as nn
@@ -153,13 +153,14 @@ if __name__ == "__main__":
     }
 
     # dataloader Parameters
-    data_folder_raw = '../data/processed/qrCodes'
+    #data_folder_raw = '../data/processed/qrCodes'
+    data_folder_raw = '../data/processed/qrcode_6000'
 
     # 影響 tranning 的參數
     batch_size = 32
     dataset_im_size = 32
 
-    lr = 0.00005
+    lr = 0.0001
 
     # Beta1 hyperparameter for Adam optimizers
     beta1 = 0.5
@@ -220,13 +221,13 @@ if __name__ == "__main__":
     fake_label = 0.
 
     # 多久繪製一張圖片
-    save_loss_png_period_of_epoehes = 10
+    save_loss_png_period_of_epoehes = 5
     # 多久寫一次 loss 到 file 內
-    save_loss2log = 10
+    save_loss2log = 5
     # 多久強制存 model 一次
-    save_weight_each_epoch = 50
+    save_weight_each_epoch = 25
     # 多久存一次 visualized image
-    save_visualized_image_each_epoch = 50
+    save_visualized_image_each_epoch = 5
 
     # 決定最佳時，存檔用的
     best_D_loss = float('inf')
