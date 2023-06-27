@@ -1,18 +1,30 @@
+import glob
 import os
 import shutil
 from datetime import datetime
 import torch
+from pathlib import Path
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 import random
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
 import os
+import cv2
+from pyzbar import pyzbar
+from PIL import Image
+import numpy as np
+import re
 
 
+'''
+make_gif(r"C:\cgit\zjpj-new\output\ResAE_HalF_ResGAN_RMSprop\2023-06-19_AM_01h23m06s\loss_png\GD",
+             r"C:\cgit\zjpj-new\output\ResAE_HalF_ResGAN_RMSprop\2023-06-19_AM_01h23m06s\loss_GD.gif", 200)
+'''
 def make_gif(image_folder, output_file, time_per_frame=500, image_filter=".png"):
     # List all PNG files in the folder
     image_files = sorted([f for f in os.listdir(image_folder) if f.endswith(image_filter)])
+    image_files.sort(key=lambda x: int(re.search(r'\d+', x).group()))
 
     # Open the first image to get size information
     first_image = Image.open(os.path.join(image_folder, image_files[0]))
@@ -50,8 +62,10 @@ def make_gif(image_folder, output_file, time_per_frame=500, image_filter=".png")
         # Specify the duration for the frame (adjust as needed)
         durations.append(time_per_frame)
 
+    #first frame wait more times
+    durations[0] = 1300
     # Save the frames as an animated GIF
-    frames[0].save(output_file, save_all=True, append_images=frames[1:], duration=durations, loop=0)
+    frames[0].save("{}.gif".format(output_file), save_all=True, append_images=frames[1:], duration=durations, loop=0)
 
 
 def create_grid_image2(left_images, right_images, grid_size, save_path=None, dpi=300):
@@ -215,3 +229,120 @@ def generate_std_qr(FOLDER, NUMBER_OF_QR):
         image = qr.make_image(fill_color="black", back_color="white")
         filename = f"{FOLDER}/QR_Version_{version}_Data_{data}.png"
         image.save(filename)
+
+
+def is_qrcode(image):
+    if isinstance(image, str):
+        #image = cv2.imread(image)
+        image = Image.open(image)
+        # pillow to np array
+        image = np.asarray(image)
+    elif isinstance(image, np.ndarray):
+        pass
+    elif isinstance(image, Image.Image):
+        image = np.asarray(image)
+    else:
+        raise ValueError("not support type:", type(image))
+
+    if len(pyzbar.decode(image))> 0:
+        return True
+    else:
+        return False
+
+
+def extract_qr_code_(image_path):
+    # 讀取圖片
+    image = cv2.imread(image_path)
+
+    # 將圖片轉換為灰階
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # 檢測 QR Code
+    decoded_objects = pyzbar.decode(gray)
+
+    # 如果有檢測到 QR Code
+    if decoded_objects:
+        # 取得 QR Code 區塊的邊界框座標
+        x, y, w, h = decoded_objects[0].rect
+
+        # 切割 QR Code 區塊
+        qr_code = image[y:y+h, x:x+w]
+
+        # 轉換成 PIL Image 物件
+        pil_image = Image.fromarray(cv2.cvtColor(qr_code, cv2.COLOR_BGR2RGB))
+
+        return pil_image
+    else:
+        print('未檢測到 QR Code')
+        return None
+
+
+def extract_qr_codes(image_path):
+    # 讀取圖片
+    image = cv2.imread(image_path)
+
+    # 將圖片轉換為灰階
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # 檢測 QR Code
+    decoded_objects = pyzbar.decode(gray)
+
+    qr_code_images = []  # 存放切割後的 QR Code 圖片
+
+    # 如果有檢測到 QR Code
+    if decoded_objects:
+        # 對每個 QR Code 執行切割
+        for obj in decoded_objects:
+            # 取得 QR Code 區塊的邊界框座標
+            x, y, w, h = obj.rect
+
+            # 切割 QR Code 區塊
+            qr_code = image[y:y+h, x:x+w]
+
+            # 轉換成 PIL Image 物件
+            pil_image = Image.fromarray(cv2.cvtColor(qr_code, cv2.COLOR_BGR2RGB))
+
+            qr_code_images.append(pil_image)
+
+    return qr_code_images
+
+
+if __name__ == "__main__":
+    print("AAA")
+
+    dir = r"C:\cgit\AutoCrawler\download\all"
+    dist = r"C:\cgit\AutoCrawler\download\qrcode"
+    images = glob.glob(os.path.join(dir, "*.*"))
+
+    passed = 0
+
+    images_list = [_ for _ in images]
+
+    i = 9445
+    images_list = images_list[i:]
+    for image in images_list:
+        print("process > ", image)
+        try:
+            if is_qrcode(image):
+                #print(image)
+                # use pillow reopoen and save to dist
+                imagename = image
+                image = Image.open(image)
+                # save to rgb
+                image = image.convert("RGB")
+
+                # 切成 qrcode 再存檔
+                ppils_list = extract_qr_codes(imagename)
+                if ppils_list is []:
+                    print("no qr code inside:", imagename)
+                    continue
+                _idx=1
+                for ppil in ppils_list:
+                    ppil.save(os.path.join(dist, "{}_{}.jpg".format(Path(imagename).stem, _idx)))
+                    _idx += 1
+                #image.save(os.path.join(dist, os.path.basename(imagename)))
+        except:
+            print("pass:", image)
+            passed += 1
+            continue
+    print("total pass:", passed)
