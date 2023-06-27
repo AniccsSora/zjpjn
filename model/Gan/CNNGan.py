@@ -13,10 +13,10 @@ from torchvision import transforms
 import numpy as np
 import matplotlib.pyplot as plt
 # from self
-from utils.dataloaders.single_qrCode_field_dataset import QRCodeDataset, get_QRCode_dataloader
+from my_utils.dataloaders.single_qrCode_field_dataset import QRCodeDataset, get_QRCode_dataloader
 #
 from pathlib import Path
-from utils.F import ensure_folder, timestamp
+from my_utils.F import ensure_folder, timestamp
 # 超參數設置
 batch_size = 128
 num_epochs = 100000
