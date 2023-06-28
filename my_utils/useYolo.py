@@ -16,6 +16,9 @@ def __get_xyxy(img:Union[pathlib.Path, str, np.ndarray], norm=False):
     assert os.path.exists(WIEGHT_PATH)
     model = torch.hub.load('ultralytics/yolov5', 'custom', WIEGHT_PATH, verbose=False)
 
+    _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # move model to device
+    model.to(_device)  # ??
     if isinstance(img, Path):
         w, h = cv2.imread(img.__str__()).shape[1::-1]
         result = model(img.__str__())
